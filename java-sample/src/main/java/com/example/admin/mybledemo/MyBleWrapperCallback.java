@@ -3,8 +3,13 @@ package com.example.admin.mybledemo;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
+import android.os.Build;
 import android.util.Log;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
+import cn.com.heaton.blelibrary.ble.Ble;
 import cn.com.heaton.blelibrary.ble.callback.wrapper.BleWrapperCallback;
 import cn.com.heaton.blelibrary.ble.model.BleDevice;
 import cn.com.heaton.blelibrary.ble.utils.ByteUtils;
@@ -22,7 +27,7 @@ public class MyBleWrapperCallback extends BleWrapperCallback<BleDevice> {
     @Override
     public void onChanged(BleDevice device, BluetoothGattCharacteristic characteristic) {
         super.onChanged(device, characteristic);
-        Log.d(TAG, "onChanged: "+ ByteUtils.toHexString(characteristic.getValue()));
+        //Log.d(TAG, "onChanged: "+ ByteUtils.toHexString(characteristic.getValue()));
     }
 
     @Override
@@ -40,7 +45,7 @@ public class MyBleWrapperCallback extends BleWrapperCallback<BleDevice> {
     @Override
     public void onConnectionChanged(BleDevice device) {
         super.onConnectionChanged(device);
-        Log.d(TAG, "onConnectionChanged: "+device.toString());
+        Log.d(TAG, "onConnectionChanged: " + device.toString());
     }
 
     @Override
@@ -52,18 +57,43 @@ public class MyBleWrapperCallback extends BleWrapperCallback<BleDevice> {
     @Override
     public void onLeScan(BleDevice device, int rssi, byte[] scanRecord) {
         super.onLeScan(device, rssi, scanRecord);
-        Log.d(TAG, "onLeScan: "+device.toString());
+        Log.d(TAG, "onLeScan: " + device.toString());
     }
 
     @Override
     public void onNotifySuccess(BleDevice device) {
         super.onNotifySuccess(device);
         Log.d(TAG, "onNotifySuccess: ");
+        Ble.getInstance().getBleRequest().setMtu(device.getBleAddress(), 50);
+        BluetoothGatt bluetoothGatt = Ble.getInstance().getBleRequest().getBluetoothGatt(device.getBleAddress());
+
+//      boolean result = false;
+//        try {
+//            for(Method temp:Class.forName(bluetoothGatt.getClass().getName()).getMethods()){
+//                if (temp.getName().equals("requestLeConnectionUpdate")) {
+//                    result = (boolean) temp.invoke(bluetoothGatt,4,4,0,500,1,10);
+//                }
+//            }
+////            Method method = BluetoothGatt.class.getMethod("requestLeConnectionUpdate");
+////            method.setAccessible(true);
+////            method.invoke(bluetoothGatt, 1, 5, 0, 500, 1, 10);
+//        } catch (IllegalAccessException e) {
+//            e.printStackTrace();
+//        } catch (InvocationTargetException e) {
+//            e.printStackTrace();
+//        } catch (ClassNotFoundException e) {
+//            e.printStackTrace();
+//        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            bluetoothGatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH);
+        }
+
     }
 
     @Override
     public void onNotifyFailed(BleDevice device, int failedCode) {
-        Log.d(TAG, "onNotifyFailed: "+failedCode);
+        Log.d(TAG, "onNotifyFailed: " + failedCode);
     }
 
     @Override

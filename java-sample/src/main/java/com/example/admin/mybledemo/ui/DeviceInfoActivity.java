@@ -17,6 +17,7 @@ import android.view.MenuItem;
 import com.example.admin.mybledemo.R;
 import com.example.admin.mybledemo.Utils;
 import com.example.admin.mybledemo.adapter.DeviceInfoAdapter;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -39,6 +40,8 @@ public class DeviceInfoActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private DeviceInfoAdapter adapter;
     private List<BluetoothGattService> gattServices;
+    private long receiveCount = 0;
+    private long lastReceiveTimeStamp = 0L;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -64,7 +67,7 @@ public class DeviceInfoActivity extends AppCompatActivity {
         gattServices = new ArrayList<>();
         adapter = new DeviceInfoAdapter(this, gattServices);
         recyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
-        recyclerView.addItemDecoration(new DividerItemDecoration(this,DividerItemDecoration.VERTICAL));
+        recyclerView.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
         recyclerView.getItemAnimator().setChangeDuration(300);
         recyclerView.getItemAnimator().setMoveDuration(300);
         recyclerView.setAdapter(adapter);
@@ -73,13 +76,12 @@ public class DeviceInfoActivity extends AppCompatActivity {
     private BleConnectCallback<BleDevice> connectCallback = new BleConnectCallback<BleDevice>() {
         @Override
         public void onConnectionChanged(BleDevice device) {
-            Log.e(TAG, "onConnectionChanged: " + device.getConnectionState()+Thread.currentThread().getName());
+            Log.e(TAG, "onConnectionChanged: " + device.getConnectionState() + Thread.currentThread().getName());
             if (device.isConnected()) {
                 actionBar.setSubtitle("已连接");
-            }else if (device.isConnecting()){
+            } else if (device.isConnecting()) {
                 actionBar.setSubtitle("连接中...");
-            }
-            else if (device.isDisconnected()){
+            } else if (device.isDisconnected()) {
                 actionBar.setSubtitle("未连接");
             }
         }
@@ -119,19 +121,30 @@ public class DeviceInfoActivity extends AppCompatActivity {
                 public void onChanged(BleDevice device, BluetoothGattCharacteristic characteristic) {
                     UUID uuid = characteristic.getUuid();
                     BleLog.e(TAG, "onChanged==uuid:" + uuid.toString());
-                    BleLog.e(TAG, "onChanged==data:" + ByteUtils.toHexString(characteristic.getValue()));
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Utils.showToast(String.format("收到设备通知数据: %s", ByteUtils.toHexString(characteristic.getValue())));
-                        }
-                    });
+//                    BleLog.d(TAG, "onChanged==data:" + ByteUtils.bytes2HexStr(characteristic.getValue()));
+//                    receiveCount++;
+//                    if (lastReceiveTimeStamp == 0) {
+//                        lastReceiveTimeStamp = System.currentTimeMillis();
+//                    } else {
+//                        long currTime = System.currentTimeMillis();
+//                        Log.d(TAG, String.format("onReceive: dt = %d(ms),sendCount = %d", (currTime - lastReceiveTimeStamp),
+//                                receiveCount));
+//                        lastReceiveTimeStamp = currTime;
+//                    }
+
+
+//                    runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            Utils.showToast(String.format("收到设备通知数据: %s", ByteUtils.toHexString(characteristic.getValue())));
+//                        }
+//                    });
                 }
 
                 @Override
                 public void onNotifySuccess(BleDevice device) {
                     super.onNotifySuccess(device);
-                    BleLog.e(TAG, "onNotifySuccess: "+device.getBleName());
+                    BleLog.e(TAG, "onNotifySuccess: " + device.getBleName());
                 }
             });
         }
@@ -151,10 +164,10 @@ public class DeviceInfoActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (bleDevice != null){
-            if (bleDevice.isConnecting()){
+        if (bleDevice != null) {
+            if (bleDevice.isConnecting()) {
                 ble.cancelConnecting(bleDevice);
-            }else if (bleDevice.isConnected()){
+            } else if (bleDevice.isConnected()) {
                 ble.disconnect(bleDevice);
             }
         }

@@ -33,6 +33,7 @@ import com.example.admin.mybledemo.R;
 import com.example.admin.mybledemo.adapter.ScanAdapter;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import cn.com.heaton.blelibrary.ble.Ble;
@@ -40,6 +41,7 @@ import cn.com.heaton.blelibrary.ble.BleLog;
 import cn.com.heaton.blelibrary.ble.callback.BleScanCallback;
 import cn.com.heaton.blelibrary.ble.callback.BleStatusCallback;
 import cn.com.heaton.blelibrary.ble.model.ScanRecord;
+import cn.com.heaton.blelibrary.ble.utils.ByteUtils;
 import cn.com.heaton.blelibrary.ble.utils.Utils;
 import cn.com.superLei.aoparms.annotation.Permission;
 import cn.com.superLei.aoparms.annotation.PermissionDenied;
@@ -82,7 +84,7 @@ public class BleActivity extends AppCompatActivity {
         bleRssiDevices = new ArrayList<>();
         adapter = new ScanAdapter(this, bleRssiDevices);
         recyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
-        recyclerView.addItemDecoration(new DividerItemDecoration(this,DividerItemDecoration.VERTICAL));
+        recyclerView.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
         recyclerView.getItemAnimator().setChangeDuration(300);
         recyclerView.getItemAnimator().setMoveDuration(300);
         recyclerView.setAdapter(adapter);
@@ -138,7 +140,7 @@ public class BleActivity extends AppCompatActivity {
     }
 
     //请求权限
-    @Permission(value = {Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION},
+    @Permission(value = {Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION},
             requestCode = REQUEST_PERMISSION_LOCATION,
             rationale = "需要蓝牙相关权限")
     public void requestPermission() {
@@ -170,10 +172,10 @@ public class BleActivity extends AppCompatActivity {
             @Override
             public void onBluetoothStatusChanged(boolean isOn) {
                 BleLog.i(TAG, "onBluetoothStatusOn: 蓝牙是否打开>>>>:" + isOn);
-                llBlutoothAdapterTip.setVisibility(isOn?View.GONE:View.VISIBLE);
-                if (isOn){
+                llBlutoothAdapterTip.setVisibility(isOn ? View.GONE : View.VISIBLE);
+                if (isOn) {
                     checkGpsStatus();
-                }else {
+                } else {
                     if (ble.isScanning()) {
                         ble.stopScan();
                     }
@@ -190,25 +192,25 @@ public class BleActivity extends AppCompatActivity {
         }
         if (!ble.isBleEnable()) {
             llBlutoothAdapterTip.setVisibility(View.VISIBLE);
-        }else {
+        } else {
             checkGpsStatus();
         }
     }
 
-    private void checkGpsStatus(){
+    private void checkGpsStatus() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                && !Utils.isGpsOpen(BleActivity.this)){
+                && !Utils.isGpsOpen(BleActivity.this)) {
             new AlertDialog.Builder(BleActivity.this)
                     .setTitle("提示")
                     .setMessage("为了更精确的扫描到Bluetooth LE设备,请打开GPS定位")
                     .setPositiveButton("确定", (dialog, which) -> {
                         Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                        startActivityForResult(intent,REQUEST_GPS);
+                        startActivityForResult(intent, REQUEST_GPS);
                     })
                     .setNegativeButton("取消", null)
                     .create()
                     .show();
-        }else {
+        } else {
             ble.startScan(scanCallback);
         }
     }
@@ -224,23 +226,36 @@ public class BleActivity extends AppCompatActivity {
     private BleScanCallback<BleRssiDevice> scanCallback = new BleScanCallback<BleRssiDevice>() {
         @Override
         public void onLeScan(final BleRssiDevice device, int rssi, byte[] scanRecord) {
-            synchronized (ble.getLocker()) {
-                for (int i = 0; i < bleRssiDevices.size(); i++) {
-                    BleRssiDevice rssiDevice = bleRssiDevices.get(i);
-                    if (TextUtils.equals(rssiDevice.getBleAddress(), device.getBleAddress())){
-                        if (rssiDevice.getRssi() != rssi && System.currentTimeMillis()-rssiDevice.getRssiUpdateTime() >1000L){
-                            rssiDevice.setRssiUpdateTime(System.currentTimeMillis());
-                            rssiDevice.setRssi(rssi);
-                            adapter.notifyItemChanged(i);
-                        }
-                        return;
-                    }
+            if (!TextUtils.isEmpty(device.getBleName()) && device.getBleName().startsWith("ZJR")) {
+                //02010208095a4a525f424c45020aff020aff1921fa349b5f80000080001000001c1800003435343634373438000000000000000000000000000000000000
+
+                Log.d("zjr", "onLeScan: " + device.getBleName() + " ,rssi: " + rssi + ",scanRecord:\n" + ByteUtils.bytes2HexStr(scanRecord));
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                    ScanRecord parseRecord = ScanRecord.parseFromBytes(scanRecord);
+                    Log.d("zjr", "scanRecord:" + parseRecord.toString());
                 }
-                device.setScanRecord(ScanRecord.parseFromBytes(scanRecord));
-                device.setRssi(rssi);
-                bleRssiDevices.add(device);
-                adapter.notifyDataSetChanged();
+
+                synchronized (ble.getLocker()) {
+                    for (int i = 0; i < bleRssiDevices.size(); i++) {
+                        BleRssiDevice rssiDevice = bleRssiDevices.get(i);
+                        if (TextUtils.equals(rssiDevice.getBleAddress(), device.getBleAddress())) {
+                            if (rssiDevice.getRssi() != rssi && System.currentTimeMillis() - rssiDevice.getRssiUpdateTime() > 1000L) {
+                                rssiDevice.setRssiUpdateTime(System.currentTimeMillis());
+                                rssiDevice.setRssi(rssi);
+                                adapter.notifyItemChanged(i);
+                            }
+                            return;
+                        }
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        device.setScanRecord(ScanRecord.parseFromBytes(scanRecord));
+                    }
+                    device.setRssi(rssi);
+                    bleRssiDevices.add(device);
+                    adapter.notifyDataSetChanged();
+                }
             }
+
         }
 
         @Override
@@ -258,7 +273,7 @@ public class BleActivity extends AppCompatActivity {
         @Override
         public void onScanFailed(int errorCode) {
             super.onScanFailed(errorCode);
-            Log.e(TAG, "onScanFailed: "+errorCode);
+            Log.e(TAG, "onScanFailed: " + errorCode);
         }
     };
 
@@ -312,7 +327,7 @@ public class BleActivity extends AppCompatActivity {
             finish();
         } else if (requestCode == Ble.REQUEST_ENABLE_BT && resultCode == Activity.RESULT_OK) {
             ble.startScan(scanCallback);
-        }else if (requestCode == REQUEST_GPS){
+        } else if (requestCode == REQUEST_GPS) {
 
         }
         super.onActivityResult(requestCode, resultCode, data);

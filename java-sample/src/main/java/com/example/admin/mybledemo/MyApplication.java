@@ -63,10 +63,10 @@ public class MyApplication extends Application {
                 .setConnectTimeout(10 * 1000)//设置连接超时时长
                 .setScanPeriod(12 * 1000)//设置扫描时长
                 .setMaxConnectNum(7)//最大连接数量
-                .setUuidService(UUID.fromString(UuidUtils.uuid16To128("fd00")))//设置主服务的uuid
-                .setUuidWriteCha(UUID.fromString(UuidUtils.uuid16To128("fd01")))//设置可写特征的uuid
-                .setUuidReadCha(UUID.fromString(UuidUtils.uuid16To128("fd02")))//设置可读特征的uuid （选填）
-                .setUuidNotifyCha(UUID.fromString(UuidUtils.uuid16To128("fd03")))//设置可通知特征的uuid （选填，库中默认已匹配可通知特征的uuid）
+                .setUuidService(UUID.fromString(UuidUtils.uuid16To128("181c")))//设置主服务的uuid
+                .setUuidWriteCha(UUID.fromString(UuidUtils.uuid16To128("f1f2")))//设置可写特征的uuid
+                .setUuidReadCha(UUID.fromString(UuidUtils.uuid16To128("f1f1")))//设置可读特征的uuid （选填）
+                .setUuidNotifyCha(UUID.fromString(UuidUtils.uuid16To128("f1f3")))//设置可通知特征的uuid （选填，库中默认已匹配可通知特征的uuid）
                 .setFactory(new BleFactory<BleRssiDevice>() {//实现自定义BleDevice时必须设置
                     @Override
                     public BleRssiDevice create(String address, String name) {

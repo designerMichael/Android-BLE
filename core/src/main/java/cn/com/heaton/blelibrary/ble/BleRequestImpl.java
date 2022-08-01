@@ -204,6 +204,10 @@ public final class BleRequestImpl<T extends BleDevice> {
             }
         }
 
+
+        private long receiveCount = 0;
+        private long lastReceiveTimeStamp = 0L;
+
         /**
          * 当连接成功的时候会回调这个方法，这个方法可以处理发送密码或者数据分析
          * 当setnotify（true）被设置时，如果MCU（设备端）上的数据改变，则该方法被回调。
@@ -213,21 +217,33 @@ public final class BleRequestImpl<T extends BleDevice> {
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
-            synchronized (locker) {
-                if (gatt == null || gatt.getDevice() == null)return;
-                BleLog.d(TAG, gatt.getDevice().getAddress() + " -- onCharacteristicChanged: "
-                        + (characteristic.getValue() != null ? ByteUtils.toHexString(characteristic.getValue()) : ""));
-                T bleDevice = getBleDeviceInternal(gatt.getDevice().getAddress());
-                if (notifyWrapperCallback != null) {
-                    notifyWrapperCallback.onChanged(bleDevice, characteristic);
-                }
-                if (options.uuid_ota_write_cha.equals(characteristic.getUuid()) || options.uuid_ota_notify_cha.equals(characteristic.getUuid())) {
-                    if (otaListener != null) {
-                        otaListener.onChange(characteristic.getValue());
+
+            BleLog.d(TAG, "onChanged==data:" + ByteUtils.bytes2HexStr(characteristic.getValue()));
+                    receiveCount++;
+                    if (lastReceiveTimeStamp == 0) {
+                        lastReceiveTimeStamp = System.currentTimeMillis();
+                    } else {
+                        long currTime = System.currentTimeMillis();
+                        BleLog.d(TAG, String.format("onReceive: dt = %d(ms),sendCount = %d", (currTime - lastReceiveTimeStamp),
+                                receiveCount));
+                        lastReceiveTimeStamp = currTime;
                     }
-                }
-            }
         }
+//            synchronized (locker) {
+//                if (gatt == null || gatt.getDevice() == null)return;
+//                BleLog.d(TAG, gatt.getDevice().getAddress() + " -- onCharacteristicChanged: "
+//                        + (characteristic.getValue() != null ? ByteUtils.bytes2HexStr(characteristic.getValue()) : ""));
+//                T bleDevice = getBleDeviceInternal(gatt.getDevice().getAddress());
+//                if (notifyWrapperCallback != null) {
+//                    notifyWrapperCallback.onChanged(bleDevice, characteristic);
+//                }
+//                if (options.uuid_ota_write_cha.equals(characteristic.getUuid()) || options.uuid_ota_notify_cha.equals(characteristic.getUuid())) {
+//                    if (otaListener != null) {
+//                        otaListener.onChange(characteristic.getValue());
+//                    }
+//                }
+//            }
+//        }
 
         @Override
         public void onDescriptorWrite(BluetoothGatt gatt,
